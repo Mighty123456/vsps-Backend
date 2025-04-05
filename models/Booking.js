@@ -21,23 +21,13 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  startTime: {
-    type: String,
-    required: true
-  },
-  endTime: {
-    type: String,
-    required: true
-  },
+
   guestCount: {
     type: Number,
     required: true
   },
   additionalServices: [{ type: String }],
-  // community: {
-  //   type: String,
-  //   default: ''
-  // },
+
   additionalNotes: {
     type: String,
     default: ''

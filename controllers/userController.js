@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Booking = require('../models/Booking');
 
 const userController = {
   // Get user profile
@@ -195,9 +196,14 @@ const userController = {
         return res.status(400).json({ message: 'Cannot delete your own account' });
       }
 
+      // Delete all bookings associated with the user's email
+      await Booking.deleteMany({ email: user.email });
+
+      // Delete the user
       await User.findByIdAndDelete(userId);
+      
       res.json({ 
-        message: 'User deleted successfully',
+        message: 'User and associated bookings deleted successfully',
         deletedUserId: userId 
       });
     } catch (error) {
@@ -255,6 +261,60 @@ const userController = {
         message: 'Server error',
         error: error.message 
       });
+    }
+  },
+
+  // Get dashboard statistics
+  getDashboardStats: async (req, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied. Admins only.' });
+      }
+
+      // Get total users count
+      const totalUsers = await User.countDocuments();
+
+      // Get total bookings count
+      const totalBookings = await Booking.countDocuments();
+
+      // Get active streams count (currently hardcoded since stream model is not implemented)
+      const activeStreams = 0;
+
+      // Calculate total revenue from approved and booked bookings
+      const bookings = await Booking.find({ 
+        status: { $in: ['Approved', 'Booked'] }
+      });
+
+      const totalRevenue = bookings.reduce((sum, booking) => {
+        // Base amount for non-samaj members
+        let amount = 1000; // Default amount for non-samaj members
+
+        // Check if the user is a samaj member (you may need to adjust this based on your user model)
+        const isSamajMember = booking.email.endsWith('@samaj.com'); // Example condition
+        if (isSamajMember) {
+          amount = 800; // Discounted amount for samaj members
+        }
+
+        // Add additional charges based on event type and guest count
+        if (booking.eventType === 'wedding') {
+          amount += 500; // Additional charge for weddings
+        }
+        if (booking.guestCount > 100) {
+          amount += 200; // Additional charge for large gatherings
+        }
+
+        return sum + amount;
+      }, 0);
+
+      res.json({
+        totalUsers,
+        totalBookings,
+        activeStreams,
+        totalRevenue
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      res.status(500).json({ message: 'Server error' });
     }
   }
 };

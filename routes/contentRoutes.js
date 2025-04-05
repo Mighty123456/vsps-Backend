@@ -4,12 +4,11 @@ const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
-// Import models
+
 const HomeContent = require('../models/HomeContent');
 const EventCategory = require('../models/EventCategory');
 const GalleryItem = require('../models/GalleryItem');
 
-// Multer configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, '../uploads');

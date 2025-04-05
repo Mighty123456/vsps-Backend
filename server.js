@@ -46,22 +46,25 @@ if (!fs.existsSync(uploadsDir)){
     fs.mkdirSync(uploadsDir);
 }
 
-// Routes
-app.use('/api/auth', authRoutes);
-//user
-app.use('/api/users', userRoutes);
-//booking
-app.use('/api/bookings', bookingRoutes);
-//contact
-app.use('/api/contact', contactRoutes);
-
-// Serve static files from uploads directory
+// Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Mount routes
+// Log when a file is accessed from the uploads directory
+app.use('/uploads', (req, res, next) => {
+  console.log(`Accessing file: ${req.url}`);
+  next();
+});
+
+app.use('/api/auth', authRoutes);
+
+app.use('/api/users', userRoutes);
+
+app.use('/api/bookings', bookingRoutes);
+
+app.use('/api/contact', contactRoutes);
+
 app.use('/api/content', contentRoutes);
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });

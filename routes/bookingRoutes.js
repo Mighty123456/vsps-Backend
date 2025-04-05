@@ -1,14 +1,13 @@
-// server/routes/bookingRoutes.js
 const express = require('express');
 const bookingController = require('../controllers/bookingController');
 const multer = require('multer');
 const path = require('path');
 const router = express.Router();
 
-// Configure multer for file upload
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/') // Make sure this directory exists
+    cb(null, 'uploads/') 
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname))
@@ -17,22 +16,21 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Submit a booking request
+
 router.post('/submit', bookingController.submitBookingRequest);
 
-// Get all bookings
+
 router.get('/', bookingController.getAllBookings);
 
-// Approve a booking
+
 router.put('/approve/:bookingId', bookingController.approveBooking);
 
-// Reject a booking
+
 router.put('/reject/:bookingId', bookingController.rejectBooking);
 
-// Confirm payment for a booking
 router.put('/confirm-payment/:bookingId', bookingController.confirmPayment);
 
-// Test email route
+
 router.post('/test-email', async (req, res) => {
   try {
     console.log('Testing email with:', {
@@ -41,7 +39,7 @@ router.post('/test-email', async (req, res) => {
     });
 
     await sendEmail(
-      process.env.ADMIN_EMAIL, // Send test email to admin
+      process.env.ADMIN_EMAIL, 
       'bookingRequest',
       {
         name: 'Test User',
@@ -59,13 +57,13 @@ router.post('/test-email', async (req, res) => {
   }
 });
 
-// Document upload route
+
 router.post('/upload-document', upload.single('document'), bookingController.uploadDocument);
 
-// Update booking route
+
 router.put('/update/:bookingId', bookingController.updateBooking);
 
-// Confirm booking
+
 router.put('/confirm-booking/:bookingId', bookingController.confirmBooking);
 
 module.exports = router;

@@ -71,21 +71,35 @@ exports.rejectBooking = async (req, res) => {
     const { bookingId } = req.params;
     const { rejectionReason } = req.body;
 
+    // First check if the booking exists
+    const existingBooking = await Booking.findById(bookingId);
+    if (!existingBooking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+
+    // Update the booking status
     const booking = await Booking.findByIdAndUpdate(
       bookingId,
       { status: 'Rejected', rejectionReason },
       { new: true }
     );
 
-    // Send rejection email
-    await sendEmail(booking.email, 'bookingRejected', {
-      name: booking.name,
-      date: booking.date.toLocaleDateString(),
-      reason: rejectionReason
-    });
+    // Send rejection email - wrap in try-catch to prevent email errors from failing the whole request
+    try {
+      await sendEmail(booking.email, 'bookingRejected', {
+        name: booking.name,
+        date: booking.date.toLocaleDateString(),
+        reason: rejectionReason
+      });
+      console.log('Rejection email sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send rejection email:', emailError);
+      // Continue with the response even if email fails
+    }
 
     res.status(200).json({ message: 'Booking rejected successfully', booking });
   } catch (error) {
+    console.error('Error in rejectBooking:', error);
     res.status(500).json({ message: 'Error rejecting booking', error: error.message });
   }
 };
@@ -188,10 +202,27 @@ exports.uploadDocument = async (req, res) => {
     }
     
     // Create the full URL for the uploaded document
-    const documentUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    // Use the correct base URL for the client
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? process.env.BASE_URL || 'http://localhost:3000'
+      : 'http://localhost:3000';
+    
+    // Ensure the baseUrl has the correct protocol
+    const formattedBaseUrl = baseUrl.startsWith('http://') || baseUrl.startsWith('https://') 
+      ? baseUrl 
+      : `http://${baseUrl}`;
+    
+    const documentUrl = `${formattedBaseUrl}/uploads/${req.file.filename}`;
     
     // Ensure the URL is properly formatted
     const formattedUrl = documentUrl.replace(/\/+/g, '/');
+    
+    console.log('Document uploaded:', {
+      originalName: req.file.originalname,
+      filename: req.file.filename,
+      path: req.file.path,
+      url: formattedUrl
+    });
     
     // Determine document type based on filename or content
     let documentType = 'Other';
