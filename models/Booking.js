@@ -46,7 +46,18 @@ const bookingSchema = new mongoose.Schema({
     type: String,
     enum: ['Aadhar Card', 'PAN Card', 'Passport', 'Event Invitation', 'Organization Letterhead', 'Birth Certificate', 'Marriage Certificate', 'Other'],
     default: 'Other'
-  }
+  },
+  documents: [{
+    url: {
+      type: String,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['Aadhar Card', 'PAN Card', 'Passport', 'Event Invitation', 'Organization Letterhead', 'Birth Certificate', 'Marriage Certificate', 'Other'],
+      default: 'Other'
+    }
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Booking', bookingSchema);

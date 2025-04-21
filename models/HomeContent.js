@@ -1,69 +1,163 @@
 const mongoose = require('mongoose');
 
+// Hero Slide Schema
+const heroSlideSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  image: {
+    type: String,
+    required: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  order: {
+    type: Number,
+    default: 0
+  }
+});
+
+const highlightSchema = new mongoose.Schema({
+  icon: {
+    type: String,
+    required: true
+  },
+  title: {
+    type: String,
+    required: true
+  },
+  subtitle: {
+    type: String,
+    required: true
+  }
+});
+
+const downloadSchema = new mongoose.Schema({
+  label: {
+    type: String,
+    default: ''
+  },
+  url: {
+    type: String,
+    default: ''
+  },
+  fileName: {
+    type: String,
+    default: ''
+  }
+});
+
+const featureSchema = new mongoose.Schema({
+  icon: {
+    type: String,
+    default: 'fa-check'
+  },
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  }
+});
+
+const teamMemberSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  position: {
+    type: String,
+    default: ''
+  },
+  image: {
+    type: String,
+    default: ''
+  },
+  description: {
+    type: String,
+    default: ''
+  }
+});
+
+// Main Home Content Schema
 const homeContentSchema = new mongoose.Schema({
-  // Hero Slider
-  slides: [{
-    image: { type: String, required: true },
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    isActive: { type: Boolean, default: true },
-    order: { type: Number, default: 0 }
-  }],
-
-  // Introduction Stats
-  stats: [{
-    icon: { type: String, required: true },
-    count: { type: String, required: true },
-    label: { type: String, required: true }
-  }],
-
-  // About Section
+  title: {
+    type: String,
+    default: ''
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  heroSlider: {
+    type: [heroSlideSchema],
+    default: []
+  },
+  introduction: {
+    heading: {
+      type: String,
+      default: ''
+    },
+    description: {
+      type: String,
+      default: ''
+    },
+    highlights: {
+      type: [highlightSchema],
+      default: []
+    },
+    download: {
+      type: downloadSchema,
+      default: {}
+    }
+  },
   about: {
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    image: { type: String, required: true },
-    features: [{
-      title: { type: String, required: true },
-      description: { type: String, required: true }
-    }]
+    heading: {
+      type: String,
+      default: ''
+    },
+    description: {
+      type: String,
+      default: ''
+    },
+    image: {
+      type: String,
+      default: ''
+    },
+    features: {
+      type: [featureSchema],
+      default: []
+    }
   },
-
-  // Leadership Section
-  leadership: [{
-    name: { type: String, required: true },
-    role: { type: String, required: true },
-    image: { type: String, required: true },
-    description: { type: String, required: true }
-  }],
-
-  // Downloadable File
-  downloadableFile: {
-    title: { type: String, required: true },
-    url: { type: String, required: true },
-    size: { type: String, required: true },
-    lastUpdated: { type: Date, default: Date.now }
-  },
-
-  // SEO Metadata
-  seo: {
-    title: { type: String },
-    description: { type: String },
-    keywords: { type: String }
+  leadership: {
+    heading: {
+      type: String,
+      default: ''
+    },
+    description: {
+      type: String,
+      default: ''
+    },
+    note: {
+      type: String,
+      default: ''
+    },
+    members: {
+      type: [teamMemberSchema],
+      default: []
+    }
   }
 }, {
   timestamps: true
 });
 
-// Method to update hero slides
-homeContentSchema.methods.updateSlides = async function(slides) {
-  this.slides = slides;
-  return this.save();
-};
-
-// Method to update about section
-homeContentSchema.methods.updateAboutSection = async function(aboutData) {
-  this.about = aboutData;
-  return this.save();
-};
-
-module.exports = mongoose.model('HomeContent', homeContentSchema);
+module.exports = mongoose.model('HomeContent', homeContentSchema); 
