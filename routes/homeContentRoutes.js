@@ -10,7 +10,8 @@ const {
   deleteHeroSlide,
   updateAbout,
   updateIntroduction,
-  updateLeadership
+  updateLeadership,
+  deleteLeadershipMember
 } = require('../controllers/homeContentController');
 
 // Create temp directory if it doesn't exist
@@ -48,5 +49,6 @@ router.put('/home/introduction', upload.single('image'), updateIntroduction);
 
 // Leadership section routes
 router.put('/home/leadership', upload.any(), updateLeadership);
+router.delete('/home/leadership/members/:id', deleteLeadershipMember);
 
 module.exports = router; 

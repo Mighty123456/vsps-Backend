@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const studentAwardSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   // Student Information
   name: {
     type: String,

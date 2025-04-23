@@ -16,6 +16,7 @@ router.get('/public/status', async (req, res) => {
         active: form.active,
         startTime: form.startTime,
         endTime: form.endTime,
+        eventDate: form.eventDate,
         isCurrentlyActive: form.isCurrentlyActive()
       };
     });
@@ -43,8 +44,8 @@ router.get('/status/:formType?', adminAuth, async (req, res) => {
       
       await Form.insertMany(defaultForms);
       return res.json({
-        samuhLagan: { active: false, lastUpdated: null, startTime: null, endTime: null, isCurrentlyActive: false },
-        studentAwards: { active: false, lastUpdated: null, startTime: null, endTime: null, isCurrentlyActive: false }
+        samuhLagan: { active: false, lastUpdated: null, startTime: null, endTime: null, eventDate: null, isCurrentlyActive: false },
+        studentAwards: { active: false, lastUpdated: null, startTime: null, endTime: null, eventDate: null, isCurrentlyActive: false }
       });
     }
 
@@ -62,8 +63,8 @@ router.get('/status/:formType?', adminAuth, async (req, res) => {
 
     // Return all form statuses
     const formStatus = {
-      samuhLagan: forms.find(f => f.formType === 'samuhLagan') || { active: false, lastUpdated: null, startTime: null, endTime: null, isCurrentlyActive: false },
-      studentAwards: forms.find(f => f.formType === 'studentAwards') || { active: false, lastUpdated: null, startTime: null, endTime: null, isCurrentlyActive: false }
+      samuhLagan: forms.find(f => f.formType === 'samuhLagan') || { active: false, lastUpdated: null, startTime: null, endTime: null, eventDate: null, isCurrentlyActive: false },
+      studentAwards: forms.find(f => f.formType === 'studentAwards') || { active: false, lastUpdated: null, startTime: null, endTime: null, eventDate: null, isCurrentlyActive: false }
     };
 
     // Add isCurrentlyActive property to each form
@@ -86,13 +87,14 @@ router.get('/status/:formType?', adminAuth, async (req, res) => {
 router.put('/status/:formType', adminAuth, async (req, res) => {
   try {
     const { formType } = req.params;
-    const { active, startTime, endTime } = req.body;
+    const { active, startTime, endTime, eventDate } = req.body;
 
     console.log('Received form update request:', {
       formType,
       active,
       startTime,
-      endTime
+      endTime,
+      eventDate
     });
 
     // Validate form type
@@ -132,6 +134,16 @@ router.put('/status/:formType', adminAuth, async (req, res) => {
       }
     }
 
+    if (eventDate) {
+      const eventDateObj = new Date(eventDate);
+      if (isNaN(eventDateObj.getTime())) {
+        return res.status(400).json({ 
+          message: 'Invalid event date format', 
+          details: `Received: ${eventDate}. Expected a valid date string.` 
+        });
+      }
+    }
+
     // Check if end time is after start time
     if (startTime && endTime) {
       const startDate = new Date(startTime);
@@ -146,71 +158,17 @@ router.put('/status/:formType', adminAuth, async (req, res) => {
 
     // Try to find and update the form
     let form = await Form.findOne({ formType });
-    
     if (!form) {
-      // Create new form if it doesn't exist
-      form = new Form({
-        formType,
-        active,
-        startTime: startTime ? new Date(startTime) : null,
-        endTime: endTime ? new Date(endTime) : null
-      });
-    } else {
-      // Update existing form
-      form.active = active;
-      form.startTime = startTime ? new Date(startTime) : null;
-      form.endTime = endTime ? new Date(endTime) : null;
-      form.lastUpdated = new Date();
+      form = new Form({ formType });
     }
 
-    try {
-      await form.save();
-      
-      // Log the updated form status
-      console.log(`Form ${formType} status updated:`, {
-        active: form.active,
-        startTime: form.startTime,
-        endTime: form.endTime,
-        isCurrentlyActive: form.isCurrentlyActive()
-      });
-    } catch (error) {
-      console.error('Error saving form:', error);
-      
-      // If we get a duplicate key error, try to update the existing form
-      if (error.code === 11000) {
-        try {
-          form = await Form.findOneAndUpdate(
-            { formType },
-            {
-              active,
-              startTime: startTime ? new Date(startTime) : null,
-              endTime: endTime ? new Date(endTime) : null,
-              lastUpdated: new Date()
-            },
-            { new: true }
-          );
-          
-          if (!form) {
-            return res.status(500).json({ 
-              message: 'Error updating form', 
-              details: 'Form not found after update attempt' 
-            });
-          }
-        } catch (updateError) {
-          console.error('Error updating form:', updateError);
-          return res.status(500).json({ 
-            message: 'Error updating form', 
-            details: `Failed to update form: ${updateError.message}` 
-          });
-        }
-      } else {
-        // Return a more detailed error message
-        return res.status(500).json({ 
-          message: 'Error saving form', 
-          details: `Failed to save form: ${error.message}` 
-        });
-      }
-    }
+    form.active = active;
+    form.startTime = startTime;
+    form.endTime = endTime;
+    form.eventDate = eventDate;
+    form.lastUpdated = new Date();
+
+    await form.save();
 
     // Return updated form status
     const updatedForm = {
@@ -219,6 +177,7 @@ router.put('/status/:formType', adminAuth, async (req, res) => {
         lastUpdated: form.lastUpdated,
         startTime: form.startTime,
         endTime: form.endTime,
+        eventDate: form.eventDate,
         isCurrentlyActive: form.isCurrentlyActive()
       }
     };

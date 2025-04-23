@@ -130,23 +130,30 @@ exports.handleHeroSlide = async (req, res) => {
     console.log('Handling hero slide...', {
       method: req.method,
       slideId: req.params.id,
-      body: req.body
+      body: req.body,
+      file: req.file
     });
 
     let homeContent = await HomeContent.findOne();
     if (!homeContent) {
+      console.log('No home content found, creating new...');
       homeContent = new HomeContent();
     }
 
     // Initialize heroSlider if it doesn't exist
     if (!homeContent.heroSlider) {
+      console.log('Initializing heroSlider array...');
       homeContent.heroSlider = [];
     }
 
+    console.log('Current heroSlider:', homeContent.heroSlider);
+
     let imageUrl = null;
+    
+    // Handle file upload if present
     if (req.file) {
       try {
-        const result = await uploadToCloudinary(req.file, 'website-content/hero-slides');
+        const result = await uploadToCloudinary(req.file, 'website-content/slides');
         imageUrl = result.secure_url;
         console.log('Slide image uploaded to Cloudinary:', imageUrl);
       } catch (uploadError) {
@@ -159,49 +166,78 @@ exports.handleHeroSlide = async (req, res) => {
       }
     }
 
-    if (req.params.id) {
-      // Update existing slide
-      const slideIndex = homeContent.heroSlider.findIndex(slide => slide._id.toString() === req.params.id);
+    if (req.method === 'PUT' && req.params.id) {
+      console.log('Updating slide with ID:', req.params.id);
+      
+      // Find the slide by ID
+      const slideIndex = homeContent.heroSlider.findIndex(slide => {
+        const slideId = slide._id ? slide._id.toString() : null;
+        console.log('Comparing slide ID:', slideId, 'with request ID:', req.params.id);
+        return slideId === req.params.id;
+      });
+
       if (slideIndex === -1) {
+        console.log('Slide not found with ID:', req.params.id);
+        console.log('Available slides:', homeContent.heroSlider.map(slide => ({
+          id: slide._id ? slide._id.toString() : null,
+          title: slide.title
+        })));
         return res.status(404).json({ success: false, message: 'Slide not found' });
       }
+
+      console.log('Found slide at index:', slideIndex);
 
       // Delete old image from Cloudinary if a new one is being uploaded
       if (imageUrl && homeContent.heroSlider[slideIndex].image) {
         try {
           const publicId = homeContent.heroSlider[slideIndex].image.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(`website-content/hero-slides/${publicId}`);
+          await cloudinary.uploader.destroy(`website-content/slides/${publicId}`);
           console.log('Old slide image deleted from Cloudinary');
         } catch (error) {
           console.error('Error deleting old slide image:', error);
         }
       }
 
-      // Update slide
-      homeContent.heroSlider[slideIndex] = {
-        ...homeContent.heroSlider[slideIndex],
+      // Update slide with new data
+      const updatedSlide = {
+        _id: homeContent.heroSlider[slideIndex]._id, // Preserve the existing _id
         title: req.body.title || homeContent.heroSlider[slideIndex].title,
         description: req.body.description || homeContent.heroSlider[slideIndex].description,
-        image: imageUrl || homeContent.heroSlider[slideIndex].image,
-        isActive: req.body.isActive === 'true'
+        isActive: req.body.isActive === 'true',
+        order: req.body.order || homeContent.heroSlider[slideIndex].order,
+        image: imageUrl || req.body.image || homeContent.heroSlider[slideIndex].image
       };
-    } else {
+
+      console.log('Updating slide with data:', updatedSlide);
+      homeContent.heroSlider[slideIndex] = updatedSlide;
+    } else if (req.method === 'POST') {
       // Add new slide
       const newSlide = {
         title: req.body.title,
         description: req.body.description,
-        image: imageUrl,
-        isActive: req.body.isActive === 'true'
+        isActive: req.body.isActive === 'true',
+        order: req.body.order || 0,
+        image: imageUrl || req.body.image
       };
+
+      console.log('Adding new slide:', newSlide);
       homeContent.heroSlider.push(newSlide);
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid request method' });
     }
 
+    // Save the updated content
     await homeContent.save();
-    console.log('Hero slide handled successfully');
+    console.log('Hero slide handled successfully:', {
+      method: req.method,
+      slideId: req.params.id,
+      imageUrl: imageUrl || req.body.image
+    });
+
     res.json({ 
       success: true, 
       data: homeContent.heroSlider,
-      message: req.params.id ? 'Slide updated successfully' : 'Slide added successfully'
+      message: req.method === 'PUT' ? 'Slide updated successfully' : 'Slide added successfully'
     });
   } catch (error) {
     console.error('Error handling hero slide:', error);
@@ -231,10 +267,11 @@ exports.deleteHeroSlide = async (req, res) => {
     if (homeContent.heroSlider[slideIndex].image) {
       try {
         const publicId = homeContent.heroSlider[slideIndex].image.split('/').pop().split('.')[0];
-        await cloudinary.uploader.destroy(`website-content/hero-slides/${publicId}`);
+        await cloudinary.uploader.destroy(`website-content/slides/${publicId}`);
         console.log('Slide image deleted from Cloudinary');
       } catch (error) {
         console.error('Error deleting slide image:', error);
+        // Continue with deletion even if image deletion fails
       }
     }
 
@@ -333,38 +370,62 @@ exports.updateIntroduction = async (req, res) => {
     }
 
     // Update fields if they exist in request
-    if (req.body.title) homeContent.introduction.title = req.body.title;
+    if (req.body.heading) homeContent.introduction.heading = req.body.heading;
     if (req.body.description) homeContent.introduction.description = req.body.description;
     
-    // Handle image upload
-    if (req.file) {
+    // Handle highlights
+    if (req.body.highlights) {
       try {
-        // Delete old image from Cloudinary if it exists
-        if (homeContent.introduction.image) {
-          const publicId = homeContent.introduction.image.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(`website-content/introduction/${publicId}`);
-        }
-
-        // Upload new image
-        const result = await uploadToCloudinary(req.file, 'website-content/introduction');
-        homeContent.introduction.image = result.secure_url;
-        console.log('Introduction image updated in Cloudinary:', result.secure_url);
-      } catch (uploadError) {
-        console.error('Error updating introduction image in Cloudinary:', uploadError);
-        return res.status(500).json({
-          success: false,
-          message: 'Error updating introduction image in Cloudinary',
-          error: uploadError.message
-        });
+        homeContent.introduction.highlights = JSON.parse(req.body.highlights);
+      } catch (error) {
+        console.error('Error parsing highlights:', error);
+        return res.status(400).json({ success: false, message: 'Invalid highlights format' });
       }
     }
 
+    // Handle download section
+    if (req.body.download) {
+      try {
+        const downloadData = JSON.parse(req.body.download);
+        console.log('Download data received:', downloadData);
+        
+        // Validate download data
+        if (!downloadData.url) {
+          console.error('No URL in download data');
+          return res.status(400).json({ success: false, message: 'Download URL is required' });
+        }
+
+        // Update download section
+        homeContent.introduction.download = {
+          label: downloadData.label || '',
+          fileName: downloadData.fileName || '',
+          url: downloadData.url
+        };
+        
+        console.log('Download section updated:', homeContent.introduction.download);
+      } catch (error) {
+        console.error('Error parsing download data:', error);
+        return res.status(400).json({ success: false, message: 'Invalid download data format' });
+      }
+    }
+
+    // Save the updated content
     await homeContent.save();
     console.log('Introduction section updated successfully');
-    res.json({ success: true, data: homeContent });
+    
+    // Return the updated content
+    res.json({ 
+      success: true, 
+      data: homeContent,
+      message: 'Introduction section updated successfully'
+    });
   } catch (error) {
     console.error('Error updating introduction section:', error);
-    res.status(500).json({ success: false, message: 'Error updating introduction section' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating introduction section',
+      error: error.message 
+    });
   }
 };
 
@@ -479,4 +540,68 @@ exports.updateLeadership = async (req, res) => {
       error: error.message 
     });
   }
-}; 
+};
+
+// Delete leadership member
+exports.deleteLeadershipMember = async (req, res) => {
+  try {
+    console.log('Deleting leadership member...', req.params.id);
+    let homeContent = await HomeContent.findOne();
+    
+    if (!homeContent || !homeContent.leadership) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Leadership section not found' 
+      });
+    }
+
+    // Find the member to delete
+    const memberIndex = homeContent.leadership.members.findIndex(
+      member => member._id.toString() === req.params.id
+    );
+
+    if (memberIndex === -1) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Leadership member not found' 
+      });
+    }
+
+    // Get the member to delete
+    const memberToDelete = homeContent.leadership.members[memberIndex];
+
+    // Delete the member's image from Cloudinary if it exists
+    if (memberToDelete.image) {
+      try {
+        const publicId = memberToDelete.image.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(`website-content/leadership/members/${publicId}`);
+        console.log('Member image deleted from Cloudinary');
+      } catch (error) {
+        console.error('Error deleting member image from Cloudinary:', error);
+      }
+    }
+
+    // Remove the member from the array
+    homeContent.leadership.members.splice(memberIndex, 1);
+
+    // Save the updated content
+    await homeContent.save();
+    console.log('Leadership member deleted successfully');
+    
+    res.json({ 
+      success: true, 
+      message: 'Leadership member deleted successfully',
+      data: homeContent.leadership 
+    });
+
+  } catch (error) {
+    console.error('Error deleting leadership member:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting leadership member',
+      error: error.message 
+    });
+  }
+};
+
+module.exports = exports; 

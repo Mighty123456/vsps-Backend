@@ -29,6 +29,10 @@ const formSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  eventDate: {
+    type: Date,
+    default: null
+  },
   lastUpdated: {
     type: Date,
     default: Date.now

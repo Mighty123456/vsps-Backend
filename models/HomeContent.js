@@ -2,6 +2,10 @@ const mongoose = require('mongoose');
 
 // Hero Slide Schema
 const heroSlideSchema = new mongoose.Schema({
+  _id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: () => new mongoose.Types.ObjectId()
+  },
   title: {
     type: String,
     required: true
@@ -22,7 +26,7 @@ const heroSlideSchema = new mongoose.Schema({
     type: Number,
     default: 0
   }
-});
+}, { _id: true });
 
 const highlightSchema = new mongoose.Schema({
   icon: {

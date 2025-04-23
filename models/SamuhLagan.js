@@ -9,8 +9,11 @@ const samuhLaganSchema = new mongoose.Schema({
   // Bride Details
   bride: {
     name: { type: String, required: true },
-    dateOfBirth: { type: Date, required: true },
+    fatherName: { type: String, required: true },
+    motherName: { type: String, required: true },
+    age: { type: Number, required: true },
     contactNumber: { type: String, required: true },
+    email: { type: String, required: true },
     address: { type: String, required: true },
     photo: { type: String },
     documents: [{ type: String }]
@@ -18,8 +21,11 @@ const samuhLaganSchema = new mongoose.Schema({
   // Groom Details
   groom: {
     name: { type: String, required: true },
-    dateOfBirth: { type: Date, required: true },
+    fatherName: { type: String, required: true },
+    motherName: { type: String, required: true },
+    age: { type: Number, required: true },
     contactNumber: { type: String, required: true },
+    email: { type: String, required: true },
     address: { type: String, required: true },
     photo: { type: String },
     documents: [{ type: String }]
