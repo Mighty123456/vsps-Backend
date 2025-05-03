@@ -14,6 +14,7 @@ const studentAwardRoutes = require('./routes/studentAwardRoutes');
 const multer = require('multer');
 const fs = require('fs');
 const homeContentRoutes = require('./routes/homeContentRoutes');
+const samuhLaganRoutes = require('./routes/samuhLagan');
 
 dotenv.config();
 connectDB();
@@ -123,6 +124,7 @@ app.use('/uploads', (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/bookings/samuh-lagan', samuhLaganRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/content', homeContentRoutes);

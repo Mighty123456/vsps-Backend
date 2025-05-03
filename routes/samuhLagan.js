@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const SamuhLagan = require('../models/SamuhLagan');
-const { isAuthenticated, isAdmin } = require('../middleware/auth');
+const { adminAuth, userAuth } = require('../middleware/auth');
 const { sendEmail } = require('../utils/emailService');
 
 // Submit new Samuh Lagan registration
-router.post('/', isAuthenticated, async (req, res) => {
+router.post('/', userAuth, async (req, res) => {
   try {
     const samuhLagan = new SamuhLagan({
       user: req.user._id,
@@ -32,7 +32,7 @@ router.post('/', isAuthenticated, async (req, res) => {
 });
 
 // Get all registrations (admin only)
-router.get('/', isAdmin, async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
   try {
     const registrations = await SamuhLagan.find()
       .populate('user', 'name email')
@@ -44,7 +44,7 @@ router.get('/', isAdmin, async (req, res) => {
 });
 
 // Get user's registrations
-router.get('/my-registrations', isAuthenticated, async (req, res) => {
+router.get('/my-registrations', userAuth, async (req, res) => {
   try {
     const registrations = await SamuhLagan.find({ user: req.user._id })
       .sort({ createdAt: -1 });
@@ -55,7 +55,7 @@ router.get('/my-registrations', isAuthenticated, async (req, res) => {
 });
 
 // Admin approve registration
-router.patch('/:id/approve', isAdmin, async (req, res) => {
+router.patch('/:id/approve', adminAuth, async (req, res) => {
   try {
     const registration = await SamuhLagan.findById(req.params.id)
       .populate('user', 'name email');
@@ -85,7 +85,7 @@ router.patch('/:id/approve', isAdmin, async (req, res) => {
 });
 
 // Admin confirm payment
-router.patch('/:id/confirm-payment', isAdmin, async (req, res) => {
+router.patch('/:id/confirm-payment', adminAuth, async (req, res) => {
   try {
     const registration = await SamuhLagan.findById(req.params.id)
       .populate('user', 'name email');
@@ -116,7 +116,7 @@ router.patch('/:id/confirm-payment', isAdmin, async (req, res) => {
 });
 
 // Admin reject registration
-router.patch('/:id/reject', isAdmin, async (req, res) => {
+router.patch('/:id/reject', adminAuth, async (req, res) => {
   try {
     const registration = await SamuhLagan.findById(req.params.id)
       .populate('user', 'name email');
@@ -143,6 +143,21 @@ router.patch('/:id/reject', isAdmin, async (req, res) => {
     res.json({ message: 'Registration rejected successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Update Samuh Lagan registration by ID (admin only)
+router.put('/update/:id', adminAuth, async (req, res) => {
+  try {
+    const updated = await SamuhLagan.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: 'Not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
